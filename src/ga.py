@@ -96,6 +96,7 @@ class ToolboxBuilder:
         self._missing = self._remove_missings("mutate")
         return self
     
+    # unstable
     def load_from_yaml(self, yaml_path: str):
         with open(yaml_path) as yaml_file:
             toolbox_raw_data =  yaml.safe_load(yaml_file)
@@ -226,7 +227,7 @@ random.seed(RANDOM_SEED)
 # define args: problem, algoConfig (pop_size, max_gen, p_crossover, p_mutation, selection) -> toolbox...
 def main():
 
-    problem = KnapsackProblem.from_yaml("tcc/problem_setup_data.yml")
+    problem = KnapsackProblem.from_yaml("src/problem_setup_data.yml")
     individual_genes_count = problem.get_number_of_items()
 
     toolbox = (

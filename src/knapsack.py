@@ -186,7 +186,7 @@ class KnapsackSolution:
 # test
 def main():
     import random
-    problem = KnapsackProblem.from_yaml('tcc/problem_setup_data.yml')
+    problem = KnapsackProblem.from_yaml('src/problem_setup_data.yml')
     print(getattr(problem, 'capacity'))
 
     solution = KnapsackSolution(problem, [random.randint(0, 1) for _ in range(22)])

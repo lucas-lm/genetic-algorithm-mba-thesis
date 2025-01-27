@@ -40,7 +40,7 @@ def solve_knapsack(problem: KnapsackProblem):
 
 
 def main():
-  problem = KnapsackProblem.from_yaml("tcc/problem_setup_data.yml")
+  problem = KnapsackProblem.from_yaml("src/problem_setup_data.yml")
   best_solutions = solve_knapsack(problem)
 
   print('#'*32)
