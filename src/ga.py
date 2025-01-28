@@ -243,9 +243,33 @@ def compute_knapsack_fitness(problem):
 
 
 def solve_knapsack(problem: KnapsackProblem, algo_config: dict = None) -> GenAlResult:
-    raise NotImplementedError() 
 
-# define args: problem, algoConfig (pop_size, max_gen, p_crossover, p_mutation, selection) -> toolbox...
+    if algo_config is None:
+        algo_config = {}
+
+    DEFAULT_SELECTION_CONFIG = {"strategy": "selTournament", "args": {"tournsize": 9}}
+    selection_config: dict = algo_config.get("selection", DEFAULT_SELECTION_CONFIG)
+    selection_strategy = selection_config.get("strategy")
+    selection_args = selection_config.get("args", {})
+
+    individual_genes_count = problem.get_number_of_items()
+
+    toolbox = (
+        ToolboxBuilder()
+            .set_individual(length=individual_genes_count)
+            .set_fitness_function(compute_knapsack_fitness(problem))
+            .set_selection_strategy(strategy=selection_strategy, **selection_args)  # change here parameters
+            .set_crossover_operator()
+            .set_mutation_operator(prob=1/individual_genes_count)
+            .build()
+        )
+    
+    genalgo = GenAl(toolbox)
+
+    result = genalgo.run()
+
+    return result
+
 def main():
 
     problem = KnapsackProblem.from_yaml("src/problem_setup_data.yml")

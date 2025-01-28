@@ -191,8 +191,8 @@ class KnapsackSolution:
 
         return {
             "execution_time": execution_time,
-            "problem": self.problem.as_dict(),
-            "solution": solution_as_dict
+            "solution": solution_as_dict,
+            "problem": self.problem.as_dict()
         }
 
     def save_to_json_file(self, json_path: str):

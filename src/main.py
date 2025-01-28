@@ -6,9 +6,11 @@ import ga
 from knapsack import KnapsackProblem
 
 
-RANDOM_SEED = 42
+RANDOM_SEED = 42  # seed to reproduce the results
 random.seed(RANDOM_SEED)
 N = 50  # number of simulations
+
+# selections to vary
 SELECTION_STRATEGIES = {
   "roulette": {"strategy": "selRoulette"},
   "tourn_3": {"strategy": "selTournament", "args": {"tournsize": 3}},
@@ -21,7 +23,6 @@ ts = int(datetime.now().timestamp())
 
 problem = KnapsackProblem.from_yaml("src/problem_setup_data.yml")
 
-# sol generator: solutions = (KnapsackSolution(ind) for ind in pop)
 
 # find best solution with brute force and save it
 start_brute_force = datetime.now()
@@ -31,8 +32,8 @@ best_solution\
   .save_to_json_file(f"output/{ts}/best_solution.json")
 
 # for each selection strategy: repeat GA N times
-for key, selection in SELECTION_STRATEGIES.items():
+for key, selection_config in SELECTION_STRATEGIES.items():
   for i in range(N):
     start_ga = datetime.now()
-    result = ga.solve_knapsack(problem, {"selection": selection}).include_execution_time(start_ga, datetime.now())
-    result.save_to_json_file(f"output/{ts}/{key}_iter_{i}.json")
+    result = ga.solve_knapsack(problem, {"selection": selection_config}).include_execution_time(start_ga, datetime.now())
+    result.save_to_json_file(f"output/{ts}/{key}_iter_{i+1}.json")
