@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from datetime import datetime
 from typing import List, Tuple, NamedTuple, Literal
 
 import yaml
@@ -93,6 +94,8 @@ class KnapsackSolution:
     def __init__(self, problem: KnapsackProblem, binary_code: List[Literal[0, 1]]):
         self._problem = problem
         self._binary_code = binary_code
+        self._start_timestamp: datetime = None
+        self._end_timestamp: datetime = None
 
     @property
     def problem(self):
@@ -111,6 +114,11 @@ class KnapsackSolution:
         binary_code = [int(bit) for bit in bit_string]
 
         return cls(problem, binary_code)
+    
+    def include_execution_time(self, start_timestamp: datetime, end_timestamp: datetime = None):
+        self._start_timestamp = start_timestamp
+        self._end_timestamp = end_timestamp or datetime.now()
+        return self
 
     def get_bit_string(self):
         return ''.join([str(bit) for bit in self.binary_code])
@@ -154,7 +162,7 @@ class KnapsackSolution:
         capacity = self.problem.capacity
         return total_weight > capacity
     
-    def as_dict(self):
+    def as_dict(self, json_serializable = False):
         solution_as_dict = {
             "binary_code": self.get_bit_string(),
             "total_value": self.get_total_value(),
@@ -166,7 +174,23 @@ class KnapsackSolution:
             "items": [item.as_dict() for item in self.get_items()],
         }
 
+        execution_time = None
+        if self._start_timestamp and self._end_timestamp:
+            start_ts = self._start_timestamp
+            end_ts = self._end_timestamp
+
+            if json_serializable:
+                start_ts = start_ts.timestamp()
+                end_ts = end_ts.timestamp()
+
+            execution_time = {
+                "start_timestamp": start_ts,
+                "end_timestamp": end_ts,
+                "duration_in_seconds": (self._end_timestamp - self._start_timestamp).total_seconds()
+            }
+
         return {
+            "execution_time": execution_time,
             "problem": self.problem.as_dict(),
             "solution": solution_as_dict
         }
@@ -179,7 +203,7 @@ class KnapsackSolution:
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
         with open(json_path, 'w') as json_file:
-            json.dump(self.as_dict(), json_file, indent=2)
+            json.dump(self.as_dict(json_serializable=True), json_file, indent=2)
 
         return
 

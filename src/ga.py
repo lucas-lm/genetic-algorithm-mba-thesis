@@ -15,10 +15,10 @@ from knapsack import KnapsackSolution, KnapsackProblem
 
 
 # Defaults:
-POPULATION_SIZE = 50
-MAX_GENERATIONS = 50
+POPULATION_SIZE = 100
+MAX_GENERATIONS = 100
 HALL_OF_FAME_SIZE = 10
-P_CROSSOVER = 0.9  # probability for crossover
+P_CROSSOVER = 1  # probability for crossover
 P_MUTATION = 0.1   # probability for mutating an individual
 
 # with reduce: from functools import reduce
@@ -133,10 +133,17 @@ class GenAlResult:
     def __init__(self, logbook: tools.Logbook, hall_of_fame = None):
         self._logbook = logbook
         self._hall_of_fame = hall_of_fame
+        self._start_timestamp: datetime = None
+        self._end_timestamp: datetime = None
 
     @property
     def hall_of_fame(self):
         return self._hall_of_fame
+
+    def include_execution_time(self, start_timestamp: datetime, end_timestamp: datetime = None):
+        self._start_timestamp = start_timestamp
+        self._end_timestamp = end_timestamp or datetime.now()
+        return self
 
     def get_generations(self):
         return self._logbook.select('population')
@@ -145,7 +152,7 @@ class GenAlResult:
         if self._hall_of_fame:
             return self._hall_of_fame[0]
 
-    def as_dict(self):
+    def as_dict(self, json_serializable=False):
         logbook = [record for record in self._logbook]
         
         hof = []
@@ -154,7 +161,23 @@ class GenAlResult:
             individual_fitness = individual.fitness.getValues()[0]
             hof.append((stringfied_individual, individual_fitness))
         
+        execution_time = None
+        if self._start_timestamp and self._end_timestamp:
+            start_ts = self._start_timestamp
+            end_ts = self._end_timestamp
+
+            if json_serializable:
+                start_ts = start_ts.timestamp()
+                end_ts = end_ts.timestamp()
+
+            execution_time = {
+                "start_timestamp": start_ts,
+                "end_timestamp": end_ts,
+                "duration_in_seconds": (self._end_timestamp - self._start_timestamp).total_seconds()
+            }
+
         return {
+            "execution_time": execution_time,
             "fittest": hof[0],
             "hall_of_fame": hof, 
             "logbook": logbook
@@ -168,7 +191,7 @@ class GenAlResult:
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
         with open(json_path, 'w') as json_file:
-            json.dump(self.as_dict(), json_file, indent=2)
+            json.dump(self.as_dict(json_serializable=True), json_file, indent=2)
 
         return
 
@@ -207,7 +230,6 @@ class GenAl:
             halloffame=hof, 
             verbose=verbose
         )
-
         return GenAlResult(logbook, hof)
 
 # fitness calculation
@@ -219,10 +241,9 @@ def compute_knapsack_fitness(problem):
         return fitness,  # return a tuple
     return compute
 
-# sol generator: solutions = (KnapsackSolution(ind) for ind in pop)
-# set the random seed:
-RANDOM_SEED = 42
-random.seed(RANDOM_SEED)
+
+def solve_knapsack(problem: KnapsackProblem, algo_config: dict = None) -> GenAlResult:
+    raise NotImplementedError() 
 
 # define args: problem, algoConfig (pop_size, max_gen, p_crossover, p_mutation, selection) -> toolbox...
 def main():
@@ -230,11 +251,14 @@ def main():
     problem = KnapsackProblem.from_yaml("src/problem_setup_data.yml")
     individual_genes_count = problem.get_number_of_items()
 
+    # selRoulette
+    # selTournament (tournSize=3)
+    # selBest -> selRanking
     toolbox = (
         ToolboxBuilder()
             .set_individual(length=individual_genes_count)
             .set_fitness_function(compute_knapsack_fitness(problem))
-            .set_selection_strategy()  # change here parameters
+            .set_selection_strategy(strategy='selRoulette')  # change here parameters
             .set_crossover_operator()
             .set_mutation_operator(prob=1/individual_genes_count)
             .build()
@@ -242,7 +266,9 @@ def main():
     
     genalgo = GenAl(toolbox)
 
-    result = genalgo.run()
+
+    start = datetime.now()
+    result = genalgo.run().include_execution_time(start, end_timestamp=datetime.now())
 
     ts = int(datetime.now().timestamp())
     result.save_to_json_file(f'output/simulation_{ts}.json')
