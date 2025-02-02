@@ -91,9 +91,12 @@ class KnapsackProblem:
 
 class KnapsackSolution:
 
-    def __init__(self, problem: KnapsackProblem, binary_code: List[Literal[0, 1]]):
+    DEFAULT_OVERWEIGHT_PENALTY = 2
+
+    def __init__(self, problem: KnapsackProblem, binary_code: List[Literal[0, 1]], overweight_penalty=None):
         self._problem = problem
         self._binary_code = binary_code
+        self._overweight_penalty = overweight_penalty if overweight_penalty is not None else self.DEFAULT_OVERWEIGHT_PENALTY
         self._start_timestamp: datetime = None
         self._end_timestamp: datetime = None
 
@@ -105,15 +108,19 @@ class KnapsackSolution:
     def binary_code(self):
         return self._binary_code
     
+    @property
+    def overweight_penalty(self):
+        return self._overweight_penalty
+    
     @classmethod
-    def from_bit_string(cls, problem: KnapsackProblem, bit_string: str):
+    def from_bit_string(cls, problem: KnapsackProblem, bit_string: str, overweight_penalty=None):
         for char in bit_string:
             if char not in '01':
                 raise ValueError(f"The argument {bit_string=} should be a string of 0s and 1s.")
 
         binary_code = [int(bit) for bit in bit_string]
 
-        return cls(problem, binary_code)
+        return cls(problem, binary_code, overweight_penalty)
     
     def include_execution_time(self, start_timestamp: datetime, end_timestamp: datetime = None):
         self._start_timestamp = start_timestamp
@@ -142,8 +149,8 @@ class KnapsackSolution:
         items = self.get_items()
         return sum(item.weight for item in items)
     
-    def compute_fitness(self, overweight_penalty_weight: int = 0):
-        fitness = self.get_total_value() - overweight_penalty_weight*self.overweight
+    def compute_fitness(self):
+        fitness = self.get_total_value() - self.overweight_penalty*self.overweight
         return max(0, fitness)
     
     @property
@@ -206,6 +213,19 @@ class KnapsackSolution:
             json.dump(self.as_dict(json_serializable=True), json_file, indent=2)
 
         return
+
+    def __repr__(self):
+        b = self.get_bit_string()
+        f = self.compute_fitness()
+        v = self.get_total_value()
+        w = self.get_total_weight()
+        p = self.overweight_penalty
+        over = self.overweight
+        return f"KnapsackSolution(bitstring = {b}, overweight_penalty = {p}, fitness = {f}, value = {v}, weight = {w}, overweight = {over})"
+
+    def __str__(self):
+        bitstring = self.get_bit_string()
+        return bitstring
 
 # test
 def main():

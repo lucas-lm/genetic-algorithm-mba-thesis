@@ -4,6 +4,9 @@ import json
 import yaml
 
 from datetime import datetime
+from operator import attrgetter
+
+# import numpy
 
 from deap import base
 from deap import creator
@@ -79,7 +82,7 @@ class ToolboxBuilder:
         return self
     
     def set_selection_strategy(self, strategy: str = 'selRoulette', **args):
-        selection_function = getattr(tools, strategy)
+        selection_function = getattr(tools, strategy) if type(strategy) is str else strategy
         self._toolbox.register("select", selection_function, **args)
         self._missing = self._remove_missings("select")
         return self
@@ -202,10 +205,6 @@ class GenAl:
         self._population_initial_size = population_initial_size
         self._max_generations = max_generations
 
-    @classmethod
-    def from_yaml(cls, yaml_path: str): ...
-
-
     def _create_random_population(self, size):
         return self._toolbox.populationCreator(n=size)
     
@@ -213,6 +212,11 @@ class GenAl:
     def _create_stats_object(self):
         stats = tools.Statistics()
         stats.register("population", _population_stringfy)
+        # stats.register("max", lambda ind: numpy.max(ind.fitness.values))
+        # stats.register("avg", lambda ind: numpy.mean(ind.fitness.values))
+        # stats.register("median", lambda ind: numpy.median(ind.fitness.values))
+        # stats.register("min", lambda ind: numpy.min(ind.fitness.values))
+        # stats.register("stddev", lambda ind: numpy.std(ind.fitness.values))
         return stats
 
     def run(self, verbose=False):
@@ -232,12 +236,47 @@ class GenAl:
         )
         return GenAlResult(logbook, hof)
 
+
+def selRanking(individuals, k, fit_attr="fitness"):
+    """Select *k* individuals from the input *individuals* using *k*
+    spins of a roulette based on ranking. The selection is made by looking 
+    only at the first objective of each individual. The list returned 
+    contains references to the input *individuals*.
+
+    The difference between :func:`selRanking` and :func:`selRoulette` is
+    the space that each individual has in the roulette. While :func:`selRoulette`
+    uses the fitness to calculate the probability of choice, :func:`selRanking`
+    uses the ranking position to calculate the probability, where the
+    best individuals have a greater probability than the worsts.
+
+    :param individuals: A list of individuals to select from.
+    :param k: The number of individuals to select.
+    :param fit_attr: The attribute of individuals to use as selection criterion
+    :returns: A list of selected individuals.
+
+    This function uses the :func:`~random.choices` function from the python base
+    :mod:`random` module.
+
+    .. warning::
+       The roulette selection by definition cannot be used for minimization
+       or when the fitness can be smaller or equal to 0.
+    """
+
+    # Sort individuals by fitness in descending order (best fitness first)
+    ranked_individuals = sorted(individuals, key=attrgetter(fit_attr), reverse=True)
+    
+    rank_weights = list(range(len(individuals), 0, -1))  # bigger weights for lower ranks (top 1 = highest)
+    
+    selected_individuals = random.choices(ranked_individuals, weights=rank_weights, k=k)
+    
+    return selected_individuals
+
+
 # fitness calculation
-# class KnapsackGA(ga_spec)[.solve(problem), .generate_seeds, .repeat_solve(problem, n)]
-def compute_knapsack_fitness(problem):
+def compute_knapsack_fitness(problem, overweight_penalty=None):
     def compute(individual):
-        solution_instance = KnapsackSolution(problem, individual)
-        fitness = solution_instance.compute_fitness(overweight_penalty_weight=2)
+        solution_instance = KnapsackSolution(problem, individual, overweight_penalty)
+        fitness = solution_instance.compute_fitness()
         return fitness,  # return a tuple
     return compute
 
@@ -248,6 +287,7 @@ def solve_knapsack(problem: KnapsackProblem, algo_config: dict = None) -> GenAlR
         algo_config = {}
 
     DEFAULT_SELECTION_CONFIG = {"strategy": "selTournament", "args": {"tournsize": 9}}
+    overweight_penalty: int = algo_config.get("overweight_penalty")
     selection_config: dict = algo_config.get("selection", DEFAULT_SELECTION_CONFIG)
     selection_strategy = selection_config.get("strategy")
     selection_args = selection_config.get("args", {})
@@ -257,7 +297,7 @@ def solve_knapsack(problem: KnapsackProblem, algo_config: dict = None) -> GenAlR
     toolbox = (
         ToolboxBuilder()
             .set_individual(length=individual_genes_count)
-            .set_fitness_function(compute_knapsack_fitness(problem))
+            .set_fitness_function(compute_knapsack_fitness(problem, overweight_penalty))
             .set_selection_strategy(strategy=selection_strategy, **selection_args)  # change here parameters
             .set_crossover_operator()
             .set_mutation_operator(prob=1/individual_genes_count)
@@ -282,7 +322,7 @@ def main():
         ToolboxBuilder()
             .set_individual(length=individual_genes_count)
             .set_fitness_function(compute_knapsack_fitness(problem))
-            .set_selection_strategy(strategy='selRoulette')  # change here parameters
+            .set_selection_strategy(strategy=selRanking)  # change here parameters
             .set_crossover_operator()
             .set_mutation_operator(prob=1/individual_genes_count)
             .build()
