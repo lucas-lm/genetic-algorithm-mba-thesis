@@ -6,10 +6,10 @@ import brute_force
 import ga
 from knapsack import KnapsackProblem
 
-
+started_at = datetime.now()
 RANDOM_SEED = 42  # seed to reproduce the results
 random.seed(RANDOM_SEED)
-N = 50  # number of simulations
+N = 1000  # number of simulations
 OVERWEIGHT_PENALTY = 2
 
 # selections to vary
@@ -22,8 +22,8 @@ SELECTION_STRATEGIES = {
   "ranking": {"strategy": ga.selRanking},
 }
 
-ts = int(datetime.now().timestamp())
-BASE_LOCATION = Path(f"output/{ts}_penalty_{OVERWEIGHT_PENALTY}")
+ts = int(started_at.timestamp())
+BASE_LOCATION = Path(f"output/{ts}_{N}_iterations_penalty_{OVERWEIGHT_PENALTY}")
 
 
 problem = KnapsackProblem.from_yaml("src/problem_setup_data.yml")
@@ -38,6 +38,7 @@ best_solution\
 
 # for each selection strategy: repeat GA N times
 for key, selection_config in SELECTION_STRATEGIES.items():
+  print(f"Running {key} with {selection_config}...")
   for i in range(N):
     start_ga = datetime.now()
     
@@ -46,3 +47,7 @@ for key, selection_config in SELECTION_STRATEGIES.items():
       .include_execution_time(start_ga, datetime.now())
     
     result.save_to_json_file(BASE_LOCATION / f"{key}_iter_{i+1}.json")
+
+ended_at = datetime.now()
+print(f"Finished at {ended_at}")
+print(f"Took {ended_at - started_at}")

@@ -15,3 +15,8 @@ wheels/
 # Jupyter
 
 .ipynb_checkpoints
+
+
+# Project specific files
+
+output/
