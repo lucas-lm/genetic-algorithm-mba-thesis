@@ -1,7 +1,7 @@
 [project]
 name = "tcc"
 version = "0.1.0"
-description = "Add your description here"
+description = "My final paper for Data Science and Analytics MBA course"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
